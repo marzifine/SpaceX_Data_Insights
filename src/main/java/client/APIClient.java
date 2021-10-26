@@ -61,6 +61,10 @@ public class APIClient {
         return null;
     }
 
+    public static String getPastEvents() throws IOException {
+        return getData("https://api.spacexdata.com/v5/launches/past");
+    }
+
     public static String getFacts() throws IOException {
         return getData("https://api.spacexdata.com/v4/history");
     }

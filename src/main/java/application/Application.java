@@ -38,7 +38,6 @@ public class Application {
             action = "start";
             start();
         }
-
         scanner.close();
     }
 
@@ -48,7 +47,7 @@ public class Application {
     }
 
     private static void handleCommand() {
-        while (scanner.hasNextLine() && !action.equals("EXIT")) {
+        while (!action.equals("EXIT") && scanner.hasNextLine()) {
             switch (scanner.nextLine()) {
                 case UPCOMING_EVENT_COMMAND: action = "upcoming";
                     handleUpcomingEvent();
@@ -60,17 +59,11 @@ public class Application {
                     handleFact();
                     break;
                 case EXIT_COMMAND: action = "EXIT";
-                    return;
-//                    handleExit();
-//                    break;
+                    break;
                 case HELP_COMMAND: action = "help";
                     System.out.println(HELP_MESSAGE);
             }
         }
-    }
-
-    private static void handleExit() {
-
     }
 
     private static void handleFact() {
@@ -85,11 +78,12 @@ public class Application {
             if (fact.has("details") && fact.get("details") instanceof String)
                 System.out.println(fact.getString("details"));
             if (fact.has("links") && fact.get("links") instanceof JSONObject) {
-                if (((JSONObject) fact.get("links")).has("article")) {
-                    if (((JSONObject) fact.get("links")).get("article") instanceof String)
-                        System.out.println("To read more click here: " + new URL(((JSONObject) fact.get("links")).getString("article")));
-                    else if (((JSONObject) fact.get("links")).get("article") instanceof JSONArray) {
-                        JSONArray articles = (JSONArray) ((JSONObject) fact.get("links")).get("article");
+                JSONObject links = (fact.getJSONObject("links"));
+                if (links.has("article")) {
+                    if (links.get("article") instanceof String)
+                        System.out.println("To read more click here: " + new URL(links.getString("article")));
+                    else if (links.get("article") instanceof JSONArray) {
+                        JSONArray articles = links.getJSONArray("article");
                         System.out.print("To learn more click here: ");
                         for (int i = 0; i < articles.length(); i++) {
                             System.out.println(articles.getString(i));
@@ -99,14 +93,36 @@ public class Application {
             }
             action = "";
             System.out.println("Now you can type in the next command");
-        } catch (IOException e) {
+        } catch (IOException error) {
             System.out.println("Sorry, something went wrong. Please try again later.");
         }
 
     }
 
     private static void handlePastEvents() {
+        try {
+            JSONArray past = new JSONArray(APIClient.getPastEvents());
+            int count = 1;
+            for (int i = past.length() - 11; i < past.length(); i++) {
+                JSONObject event = past.getJSONObject(i);
+                Long timeStamp = event.getLong("date_unix");
+                Date date = new Date(timeStamp*1000);
+                int crewAmount = event.getJSONArray("crew").length();
+                System.out.println(count + ". " + "The event launched on " + date + " with " + crewAmount + "people on board.");
+                if (event.has("details") && event.get("details") instanceof String) {
+                    System.out.println("The description to this event is:\n" + event.getString("details"));
+                }
+                count++;
+            }
+            System.out.println("Do you want to get more information about any of those events?\n" +
+                    "Type YES if you do:)");
+            if (scanner.nextLine().equalsIgnoreCase("yes")) {
+                System.out.println("Please type in the number of event.");
+            }
 
+        } catch (IOException error) {
+            System.out.println("Sorry, something went wrong. Please try again later.");
+        }
     }
 
     private static void handleUpcomingEvent() {
@@ -123,6 +139,7 @@ public class Application {
                     break;
                 }
             }
+            System.out.println(nextEvent);
             if (nextEvent == null) {
                 System.out.println("Sorry, I could not find next event. Please try again later.");
                 return;
@@ -133,20 +150,25 @@ public class Application {
             int crewAmount = nextEvent.getJSONArray("crew").length();
 
             System.out.println("Next upcoming event launches on " + date + "with " + crewAmount + " people on board.");
+
             if (nextEvent.has("details") && nextEvent.get("details") instanceof String) {
                 System.out.println("The description to this event is:\n" + nextEvent.getString("details"));
             }
 
-            if (nextEvent.has("webcast") && nextEvent.get("webcast") instanceof String) {
-                System.out.println("Here is the link to webcast: " + new URL(nextEvent.getString("webcast")));
-            }
+            if (nextEvent.has("links") && nextEvent.get("links") instanceof JSONObject) {
+                JSONObject links = nextEvent.getJSONObject("links");
+                if (links.has("webcast") && links.get("webcast") instanceof String)
+                    System.out.println("Here is the link to webcast: " + new URL(links.getString("webcast")));
 
-            if (nextEvent.has("wikipedia") && nextEvent.get("wikipedia") instanceof String) {
-                System.out.println("Here is the link to wikipedia page: " + new URL(nextEvent.getString("wikipedia")));
+                if (links.has("wikipedia") && links.get("wikipedia") instanceof String)
+                    System.out.println("Here is the link to wikipedia page: " + new URL(links.getString("wikipedia")));
+
+                if (links.has("article") && links.get("article") instanceof String)
+                    System.out.println("Here is the link to an article: " + new URL(links.getString("article")));
             }
 
             System.out.println("Do you want to get more information about this launch?\n" +
-                    "Type YES if you do.");
+                    "Type YES if you do:)");
             if (scanner.nextLine().equalsIgnoreCase("yes")) {
                 action += ":choosing";
                 System.out.println("If you want to get more information about the rocket please type in \"rocket\".");
@@ -208,5 +230,9 @@ public class Application {
         } catch (IOException error) {
             System.out.println("Sorry, something went wrong. Please try again later.");
         }
+    }
+
+    private static void getEventData(JSONObject event) {
+
     }
 }
