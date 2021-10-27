@@ -81,6 +81,10 @@ public class APIClient {
         return getData("https://api.spacexdata.com/v4/crew/" + id);
     }
 
+    public static String getLaunchpadInfo(String id) throws IOException {
+        return getData("https://api.spacexdata.com/v4/launchpads/" + id);
+    }
+
     private static String getData(String url) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod("GET");
