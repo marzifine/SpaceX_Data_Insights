@@ -11,6 +11,7 @@ import java.util.*;
 public class Application {
     private static Scanner scanner;
     private static String action = "";
+    private static Map<User, Integer> users = new HashMap<>();
 
     private final static String START_COMMAND = "/start";
     private final static String UPCOMING_EVENT_COMMAND = "/upcoming";
@@ -35,21 +36,12 @@ public class Application {
 
         System.out.println(GREETING_MESSAGE);
         handleCommand();
-//        if (scanner.nextLine().equalsIgnoreCase(START_COMMAND)) {
-//            action = "start";
-//            start();
-//        }
         scanner.close();
     }
 
-//    public static void start() {
-//        System.out.println(HELP_MESSAGE);
-//        handleCommand();
-//    }
-
     private static void handleCommand() {
-        System.out.println("Now you can type in the next command");
-        while (!action.equals("EXIT") && scanner.hasNextLine()) {
+        while (!action.equals("EXIT")) {
+            System.out.println("Now you can type in the next command");
             switch (scanner.nextLine()) {
                 case UPCOMING_EVENT_COMMAND: action = "upcoming";
                     handleUpcomingEvent();
@@ -134,7 +126,12 @@ public class Application {
                 }
                 if (count % 5 == 0) {
                     System.out.println("Type in NEXT to get next 5 launches.");
-                    if (!scanner.nextLine().equalsIgnoreCase("next")) {
+                    String input = scanner.nextLine();
+                    if (input.startsWith("/")) {
+                        handleCommand(input);
+                        return;
+                    }
+                    if (!input.equalsIgnoreCase("next")) {
                         break;
                     }
                 }
@@ -160,9 +157,11 @@ public class Application {
                 } else if (idLine.equals("EXIT")) {
                     action = "";
                     System.out.println("Now you can type in the next command");
+                } else if (idLine.startsWith("/")) {
+                    handleCommand(idLine);
+                    return;
                 }
             }
-
         } catch (IOException error) {
             System.out.println("Sorry, something went wrong. Please try again later.");
         }
@@ -205,7 +204,10 @@ public class Application {
             System.out.println("If you want to abort this section type \"EXIT\"");
             while (action.contains(":choosing")) {
                 String command = scanner.nextLine();
-                if (command.startsWith("/")) handleCommand(command);
+                if (command.startsWith("/")) {
+                    handleCommand(command);
+                    return;
+                }
                 switch (command) {
                     case "rocket":
                         String rocketId = "";
