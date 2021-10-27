@@ -19,8 +19,8 @@ public class Application {
     private final static String EXIT_COMMAND = "/exit";
     private final static String HELP_COMMAND = "/help";
     private final static String HELP_MESSAGE = "Use the following commands to get new information:\n" +
-                                                UPCOMING_EVENT_COMMAND + " - get an upcoming event\n" +
-                                                PAST_EVENTS_COMMAND + " - get last 10 events\n" +
+                                                UPCOMING_EVENT_COMMAND + " - get information about upcoming event\n" +
+                                                PAST_EVENTS_COMMAND + " - get information about 10 last events\n" +
                                                 FACT_COMMAND + " - get a random fact about the SpaceX company\n" +
                                                 HELP_COMMAND + " - get this message\n" +
                                                 EXIT_COMMAND + " - exit bot";
@@ -103,7 +103,7 @@ public class Application {
         try {
             JSONArray past = new JSONArray(APIClient.getPastEvents());
             int count = 1;
-            for (int i = past.length() - 11; i < past.length(); i++) {
+            for (int i = past.length() - 1; i >= 0; i--) {
                 JSONObject event = past.getJSONObject(i);
                 Long timeStamp = event.getLong("date_unix");
                 Date date = new Date(timeStamp*1000);
@@ -111,6 +111,12 @@ public class Application {
                 System.out.println(count + ". " + "The event launched on " + date + " with " + crewAmount + "people on board.");
                 if (event.has("details") && event.get("details") instanceof String) {
                     System.out.println("The description to this event is:\n" + event.getString("details"));
+                }
+                if (count % 5 == 0) {
+                    System.out.println("Type in NEXT to get next 5 launches.");
+                    if (!scanner.nextLine().equalsIgnoreCase("next")) {
+                        break;
+                    }
                 }
                 count++;
             }
@@ -139,7 +145,6 @@ public class Application {
                     break;
                 }
             }
-            System.out.println(nextEvent);
             if (nextEvent == null) {
                 System.out.println("Sorry, I could not find next event. Please try again later.");
                 return;
@@ -149,7 +154,7 @@ public class Application {
 
             int crewAmount = nextEvent.getJSONArray("crew").length();
 
-            System.out.println("Next upcoming event launches on " + date + "with " + crewAmount + " people on board.");
+            System.out.println("Next launch is on " + date + "with " + crewAmount + " people on board.");
 
             if (nextEvent.has("details") && nextEvent.get("details") instanceof String) {
                 System.out.println("The description to this event is:\n" + nextEvent.getString("details"));
