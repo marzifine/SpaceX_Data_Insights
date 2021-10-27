@@ -27,28 +27,49 @@ public class Application {
     private static final String GREETING_MESSAGE =
             "Welcome to SpaceX data insights!\n" +
             "The bot can provide you insights about upcoming flights, information on past events, \n" +
-            "facts, history and some other information. \n" +
-            "To start please enter " + START_COMMAND +".";
+            "facts, history and some other information.";
+//            "To start please enter " + START_COMMAND +".";
 
     public static void main(String[] args) throws IOException {
         scanner = new Scanner(System.in);
 
         System.out.println(GREETING_MESSAGE);
-        if (scanner.nextLine().equalsIgnoreCase(START_COMMAND)) {
-            action = "start";
-            start();
-        }
+        handleCommand();
+//        if (scanner.nextLine().equalsIgnoreCase(START_COMMAND)) {
+//            action = "start";
+//            start();
+//        }
         scanner.close();
     }
 
-    public static void start() {
-        System.out.println(HELP_MESSAGE);
-        handleCommand();
-    }
+//    public static void start() {
+//        System.out.println(HELP_MESSAGE);
+//        handleCommand();
+//    }
 
     private static void handleCommand() {
+        System.out.println("Now you can type in the next command");
         while (!action.equals("EXIT") && scanner.hasNextLine()) {
             switch (scanner.nextLine()) {
+                case UPCOMING_EVENT_COMMAND: action = "upcoming";
+                    handleUpcomingEvent();
+                    break;
+                case PAST_EVENTS_COMMAND: action = "past";
+                    handlePastEvents();
+                    break;
+                case FACT_COMMAND: action = "fact";
+                    handleFact();
+                    break;
+                case EXIT_COMMAND: action = "EXIT";
+                    break;
+                case HELP_COMMAND: action = "help";
+                    System.out.println(HELP_MESSAGE);
+            }
+        }
+    }
+    private static void handleCommand(String command) {
+        if (!action.equals("EXIT")) {
+            switch (command) {
                 case UPCOMING_EVENT_COMMAND: action = "upcoming";
                     handleUpcomingEvent();
                     break;
@@ -92,7 +113,6 @@ public class Application {
                 }
             }
             action = "";
-            System.out.println("Now you can type in the next command");
         } catch (IOException error) {
             System.out.println("Sorry, something went wrong. Please try again later.");
         }
@@ -183,8 +203,10 @@ public class Application {
             System.out.println("If you want to get more information about the crew please enter \"crew\".");
             System.out.println("If you want to get more information about the launchpad please type in \"launchpad\"");
             System.out.println("If you want to abort this section type \"EXIT\"");
-            while (action.contains(":choosing") && scanner.hasNext()) {
-                switch (scanner.nextLine()) {
+            while (action.contains(":choosing")) {
+                String command = scanner.nextLine();
+                if (command.startsWith("/")) handleCommand(command);
+                switch (command) {
                     case "rocket":
                         String rocketId = "";
                         if (event.has("rocket") && event.get("rocket") instanceof String)
@@ -276,7 +298,6 @@ public class Application {
             System.out.print("Next launch is on " + date + " with ");
             getEventData(nextEvent);
             action = "";
-            System.out.println("Now you can type in the next command");
         } catch (IOException error) {
             System.out.println("Sorry, something went wrong. Please try again later.");
         }
