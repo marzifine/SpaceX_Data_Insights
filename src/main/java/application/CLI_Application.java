@@ -31,11 +31,12 @@ public class CLI_Application {
         scanner = new Scanner(System.in);
 
         try {
-            GREETING_MESSAGE = Files.readString(Path.of("src", "main", "java", "resources", "greetings.txt"));
-            commands.addAll(Files.readAllLines(Path.of("src", "main", "java", "resources", "commands-cli")));
+            GREETING_MESSAGE = Files.readString(Path.of("src",  "resources", "greetings.txt"));
+            commands.addAll(Files.readAllLines(Path.of("src",  "resources", "commands-cli")));
         } catch (IOException ignored) {
         }
         System.out.println(GREETING_MESSAGE);
+        System.out.println(HELP_MESSAGE);
         handleCommand();
         scanner.close();
     }
@@ -138,9 +139,6 @@ public class CLI_Application {
                 Date date = new Date(timeStamp * 1000);
                 System.out.print(count + ". " + "The launch was on " + date + " with ");
                 printCrewAmount(event.getJSONArray("crew").length());
-                if (event.has("details") && event.get("details") instanceof String) {
-                    System.out.println("The description to this event is:\n" + event.getString("details"));
-                }
                 if (count % 5 == 0) {
                     System.out.println("Type in NEXT to get next 5 launches.");
                     String input = scanner.nextLine();

@@ -30,6 +30,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static Map<Long, User> users = new HashMap<Long, User>();
     private static String GREETING_MESSAGE;
     private final Set<String> commands = new HashSet<>();
+    private final int TOKEN_LENGTH = 46;
 
     public TelegramBot() {
         super();
@@ -51,8 +52,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             return Files.readString(Path.of("src", "resources", "api.txt"));
         } catch (IOException e) {
             Scanner sc = new Scanner(System.in);
-            System.out.println("Please enter your bot token");
+            System.out.println("Please enter your bot token:");
             String token = sc.nextLine();
+            while (token.length() != TOKEN_LENGTH || !token.contains(":")) {
+                System.out.println("Please enter right bot token:");
+                token = sc.nextLine();
+            }
             try {
                 Files.writeString(Path.of("src", "resources", "api.txt"), token);
             } catch (IOException ioException) {
