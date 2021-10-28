@@ -1,3 +1,4 @@
 # Project exclude paths
 /target/
 /.idea/vcs.xml
+/src/resources/api.txt

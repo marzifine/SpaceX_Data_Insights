@@ -34,8 +34,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     public TelegramBot() {
         super();
         try {
-            GREETING_MESSAGE = Files.readString(Path.of("src", "main", "java", "resources", "greetings.txt"));
-            commands.addAll(Files.readAllLines(Path.of("src", "main", "java", "resources", "commands-bot")));
+            GREETING_MESSAGE = Files.readString(Path.of("src", "resources", "greetings.txt"));
+            commands.addAll(Files.readAllLines(Path.of("src",  "resources", "commands-bot")));
         } catch (IOException ignored) {
         }
     }
@@ -47,7 +47,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return "2044808909:AAH70a1hUq172F7dfsYQVWrzCHgL1dbYNaE";
+        try {
+            return Files.readString(Path.of("src", "resources", "api.txt"));
+        } catch (IOException e) {
+            Scanner sc = new Scanner(System.in);
+            System.out.println("Please enter your bot token");
+            String token = sc.nextLine();
+            try {
+                Files.writeString(Path.of("src", "resources", "api.txt"), token);
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+            System.out.println("If you want to change it, open \"src\", \"resources\", \"api.txt\")");
+            return token;
+        }
     }
 
     @Override
@@ -70,7 +83,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     default -> {
                         SendMessage message = new SendMessage();
                         message.setChatId(String.valueOf(chatId));
-                        message.setText("\uD83D\uDE2E Sorry I don't know this command... Try another one");
+                        message.setText("Sorry I don't know this command... Try another one \uD83E\uDD7A");
                         try {
                             execute(message); // Call method to send the message
                         } catch (TelegramApiException e) {
@@ -78,24 +91,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                         }
                     }
                 }
-            } else {
-//                if (update.getMessage().getText().equals("EXIT")) {
-//                    user.setAction("");
-//                    SendMessage message = new SendMessage();
-//                    message.setChatId(String.valueOf(chatId));
-//                    message.setText("Action was successfully aborted!");
-//                    ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
-//                    remove.setRemoveKeyboard(true);
-//                    message.setReplyMarkup(remove);
-//                    try {
-//                        execute(message); // Call method to send the message
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                } else if (!user.getAction().equals("")) {
-//                    if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user, chatId);
-//                    else if (user.getAction().contains("past:")) handlePastEvents(update, user, chatId);
-//                }
             }
         } else if (update.hasCallbackQuery()) {
             if (!users.containsKey(currentUserId))
@@ -129,7 +124,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 JSONObject links = (fact.getJSONObject("links"));
                 if (links.has("article")) {
                     if (links.get("article") instanceof String)
-                        messageText += "\nTo read more click here: " + new URL(links.getString("article"));
+                        messageText += "\nTo read more click here: " + new URL(links.getString("article")) + "\n";
                     else if (links.get("article") instanceof JSONArray) {
                         JSONArray articles = links.getJSONArray("article");
                         messageText += ("\nTo read more click here: ");
@@ -150,7 +145,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText("\uD83D\uDE2C Sorry, something went wrong. Please try again later.");
+            message.setText("Sorry, something went wrong. Please try again later \uD83E\uDD7A");
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
@@ -167,9 +162,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 getNextFivePastEvents(user, past, chatId);
 
             }
-//                if (user.getAction().contains("choosing")) {
-//                    getEventData(update, user, chatId);
-//                } else
             if (callbackQuery[1].equalsIgnoreCase("event")) {
                 String messageText = "";
                 int id = Integer.parseInt(update.getCallbackQuery().getData()
@@ -180,16 +172,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 Date date = new Date(timeStamp * 1000);
                 messageText += "The launch was on " + date + " with ";
                 getLaunchDetails(user, messageText, event, chatId, "past:");
-//                user.setAction("past:ask:choosing");
             } else {
                 switch (callbackQuery[1]) {
                     case "next":
                         JSONArray past = user.getPastEvents();
                         getNextFivePastEvents(user, past, chatId);
                         break;
-                    case "exit":
+                    case "reset":
                         user.setPastEventId(1);
-//                        user.setAction("");
                         break;
                     default:
                         getEventData(user, chatId, callbackQuery, "past");
@@ -199,7 +189,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText("\uD83D\uDE2C Sorry, something went wrong. Please try again later.");
+            message.setText("Sorry, something went wrong. Please try again later \uD83E\uDD7A");
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
@@ -215,13 +205,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (event.has("links") && event.get("links") instanceof JSONObject) {
             JSONObject links = event.getJSONObject("links");
             if (links.has("webcast") && links.get("webcast") instanceof String)
-                messageText += "Here is the link to webcast: " + new URL(links.getString("webcast"));
+                messageText += "Here is the link to webcast: " + new URL(links.getString("webcast")) + "\n";
 
             if (links.has("wikipedia") && links.get("wikipedia") instanceof String)
-                messageText += "Here is the link to wikipedia page: " + new URL(links.getString("wikipedia"));
+                messageText += "Here is the link to wikipedia page: " + new URL(links.getString("wikipedia")) + "\n";
 
             if (links.has("article") && links.get("article") instanceof String)
-                messageText += "Here is the link to an article: " + new URL(links.getString("article"));
+                messageText += "Here is the link to an article: " + new URL(links.getString("article")) + "\n";
         }
         user.setEvent(event);
         askAboutDetails(user, messageText, chatId, callbackAction);
@@ -265,12 +255,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowInline.add(next);
         rowsInline.add(rowInline);
 
-        //add exit button
+        //add reset button
         List<InlineKeyboardButton> nextRowInline = new ArrayList<>();
-        InlineKeyboardButton exit = new InlineKeyboardButton();
-        exit.setText("EXIT");
-        exit.setCallbackData("past:exit");
-        nextRowInline.add(exit);
+        InlineKeyboardButton reset = new InlineKeyboardButton();
+        reset.setText("RESET");
+        reset.setCallbackData("past:exit");
+        nextRowInline.add(reset);
         rowsInline.add(nextRowInline);
 
         SendMessage message = new SendMessage();
@@ -317,14 +307,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                     String type = rocket.getString("type");
                     String firstFlight = rocket.getString("first_flight");
                     messageText += "The name of the " + type + " is " + nameRocket + "\n" +
-                            "and its first flight was on " + firstFlight + ".";
+                            "and its first flight was on " + firstFlight + ".\n";
                     if (rocket.has("description") && rocket.get("description") instanceof String) {
                         String description = rocket.getString("description");
-                        messageText += "Provided description is:\n" + description;
+                        messageText += "Provided description is:\n" + description + "\n";
                     }
                     if (rocket.has("flickr_images") && rocket.get("flickr_images") instanceof JSONArray) {
                         String flickrImage = ((JSONArray) rocket.get("flickr_images")).getString(0);
-                        messageText += "Here is a link to an image: " + new URL(flickrImage);
+                        messageText += "Here is a link to an image: " + new URL(flickrImage) + "\n";
                     }
                     break;
                 //TODO get event by id
@@ -337,6 +327,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                                 "Please try another time \uD83E\uDD7A";
                         break;
                     }
+                    messageText += "Meet the crew! \uD83E\uDDD1\u200D\uD83D\uDE80 \n";
                     for (int i = 0; i < crew.length(); i++) {
                         String memberId = crew.getJSONObject(i).getString("crew");
                         JSONObject member = new JSONObject(APIClient.getCrewInfo(memberId));
@@ -359,6 +350,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                                 "Please try again later \uD83E\uDD7A";
                         break;
                     }
+                    messageText += "This is a launchpad for the selected flight! \uD83D\uDCA5 \n";
                     String launchpadId = callbackQuery[2];
                     String launchpadInfo = APIClient.getLaunchpadInfo(launchpadId);
                     JSONObject launchpad = new JSONObject(launchpadInfo);
@@ -375,11 +367,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
-//            askAboutDetails(user, messageText, chatId, callbackAction);
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText("\uD83D\uDE2C Sorry, something went wrong. Please try again later.");
+            message.setText("Sorry, something went wrong. Please try again later \uD83E\uDD7A");
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
@@ -392,11 +383,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(messageText);
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(true);
-        List<KeyboardRow> list = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
@@ -404,48 +390,32 @@ public class TelegramBot extends TelegramLongPollingBot {
         String rocketId = "";
         if (user.getEvent().has("rocket") && user.getEvent().get("rocket") instanceof String)
             rocketId = user.getEvent().getString("rocket");
-        if (rocketId.equals("")) {
-            messageText += "Sorry, information about the rocket is missing.\n" +
-                    "Please try again later \uD83E\uDD7A";
-        }
         InlineKeyboardButton rocket = new InlineKeyboardButton();
-        rocket.setText("ROCKET");
+        rocket.setText("\uD83D\uDE80 ROCKET \uD83D\uDE80");
         rocket.setCallbackData(callbackAction + "rocket:" + rocketId);
 
 
         InlineKeyboardButton crew = new InlineKeyboardButton();
-        crew.setText("CREW");
+        crew.setText("\uD83D\uDC69\u200D\uD83D\uDE80 CREW \uD83D\uDC69\u200D\uD83D\uDE80");
         //id for crew is the id of event, cause of large data size
         crew.setCallbackData(callbackAction + "crew:" + user.getEvent().getString("id"));
 
+        List<InlineKeyboardButton> secondRowInline = new ArrayList<>();
         String launchpadId = "";
         if (user.getEvent().has("launchpad") && user.getEvent().get("launchpad") instanceof String)
             launchpadId = user.getEvent().getString("launchpad");
-        if (launchpadId.equals("")) {
-            messageText += "Sorry, information about the launchpad is missing.\n" +
-                    "Please try again later \uD83E\uDD7A";
-        }
         InlineKeyboardButton launchpad = new InlineKeyboardButton();
-        launchpad.setText("LAUNCHPAD");
+        launchpad.setText("\uD83D\uDCA5 LAUNCHPAD \uD83D\uDCA5");
         launchpad.setCallbackData(callbackAction + "launchpad:" + launchpadId);
 
         rowInline.add(rocket);
         rowInline.add(crew);
-        rowInline.add(launchpad);
+        secondRowInline.add(launchpad);
 
         rowsInline.add(rowInline);
-
-        List<InlineKeyboardButton> secondRowInline = new ArrayList<>();
-        InlineKeyboardButton exit = new InlineKeyboardButton();
-        exit.setText("EXIT");
-        exit.setCallbackData("EXIT");
-
-        secondRowInline.add(exit);
         rowsInline.add(secondRowInline);
-        markupInline.setKeyboard(rowsInline);
 
-        keyboardMarkup.setKeyboard(list);
-        message.setReplyMarkup(keyboardMarkup);
+        markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
         try {
             execute(message); // Call method to send the message
@@ -473,7 +443,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 if (nextEvent == null) {
                     SendMessage message = new SendMessage();
                     message.setChatId(String.valueOf(chatId));
-                    message.setText("\uD83D\uDE14 Sorry, I could not find next event. Please try again later.");
+                    message.setText("Sorry, I could not find next event. Please try again later \uD83E\uDD7A");
                     try {
                         execute(message); // Call method to send the message
                     } catch (TelegramApiException e) {
@@ -491,7 +461,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText("\uD83D\uDE2C Sorry, something went wrong. Please try again later.");
+            message.setText("Sorry, something went wrong. Please try again later \uD83E\uDD7A");
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
