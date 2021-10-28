@@ -459,6 +459,12 @@ public class Application extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method searches for upcoming events at SpaceX and
+     * gives information
+     * @param update
+     * @param user
+     */
     private void handleUpcomingEvent(Update update, User user) {
         try {
             if (user.getAction().equals("")) {
@@ -628,6 +634,4 @@ public class Application extends TelegramLongPollingBot {
             }
         }
     }
-
-//    private void handleHelp(Update update, User user) { }
 }
