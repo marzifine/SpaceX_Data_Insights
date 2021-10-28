@@ -89,6 +89,7 @@ public class CLI_Application {
                 case HELP_COMMAND:
                     action = "help";
                     System.out.println(HELP_MESSAGE);
+                    break;
                 default:
                     System.out.println("Sorry I don't know this command... Try another one");
             }

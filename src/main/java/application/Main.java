@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        if (args[0].equals("-t"))
+        if (args.length > 0 && args[0].equals("-t"))
             try {
                 TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
                 telegramBotsApi.registerBot(new TelegramBot());
