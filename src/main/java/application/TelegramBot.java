@@ -64,7 +64,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 user.setAction("");
                 String command = update.getMessage().getText();
                 switch (command) {
-                    case START_COMMAND -> handleStart(update, user, chatId);
+                    case START_COMMAND -> handleStart(chatId);
                     case UPCOMING_EVENT_COMMAND -> handleUpcomingEvent(update, user, chatId, false, null);
                     case PAST_EVENTS_COMMAND -> handlePastEvents(update, user, chatId, false, null);
                     case FACT_COMMAND -> handleFact(update, user, chatId);
@@ -503,21 +503,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleStart(Update update, User user, Integer chatId) {
-        if (user.getAction().equals("")) {
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(chatId));
-            message.setText(GREETING_MESSAGE);
-            try {
-                execute(message); // Call method to send the message
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-            try {
-                execute(message); // Call method to send the message
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+    private void handleStart(Integer chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(GREETING_MESSAGE);
+        try {
+            execute(message); // Call method to send the message
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 }
