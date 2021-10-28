@@ -4,6 +4,7 @@ import client.APIClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -49,7 +50,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         try {
-            return Files.readString(Path.of("src", "resources", "api.txt"));
+            String token = Files.readString(Path.of("src", "resources", "api.txt"));
+            if (token.length() != TOKEN_LENGTH || !token.contains(":")) {
+                throw new IOException("Wrong token");
+            }
+            return token;
         } catch (IOException e) {
             Scanner sc = new Scanner(System.in);
             System.out.println("Please enter your bot token:");
@@ -63,7 +68,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (IOException ioException) {
                 ioException.printStackTrace();
             }
-            System.out.println("If you want to change it, open \"src\", \"resources\", \"api.txt\")");
+            System.out.println("If you want to change it, open \"src\", \"resources\", \"api.txt\"");
             return token;
         }
     }
@@ -214,6 +219,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             throws MalformedURLException {
         messageText = getCrewAmountString(messageText, event);
 
+        if (event.has("details") && event.get("details") instanceof String) {
+            messageText += "The description to this event is:\n" + event.getString("details") + "\n";
+        }
+
         if (event.has("links") && event.get("links") instanceof JSONObject) {
             JSONObject links = event.getJSONObject("links");
             if (links.has("webcast") && links.get("webcast") instanceof String)
@@ -292,14 +301,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         JSONArray crew = event.getJSONArray("crew");
         int crewAmount = crew.length();
         if (crewAmount == 0)
-            messageText += "no people ob board.\n";
+            messageText += "no people on board.\n";
         else if (crewAmount == 1)
             messageText += "1 person on board.\n";
         else
             messageText += crewAmount + " people on board.\n";
-        if (event.has("details") && event.get("details") instanceof String) {
-            messageText += "The description to this event is:\n" + event.getString("details") + "\n";
-        }
         return messageText;
     }
 
@@ -339,13 +345,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                                 "Please try another time \uD83E\uDD7A";
                         break;
                     }
-                    messageText += "Meet the crew! \uD83E\uDDD1\u200D\uD83D\uDE80 \n";
+                    messageText += "Meet the crew!";
+                    for (int i = 0; i < crew.length(); i++)
+                        messageText += "\uD83E\uDDD1\u200D\uD83D\uDE80";
+                    messageText += "\n\n";
                     for (int i = 0; i < crew.length(); i++) {
                         String memberId = crew.getJSONObject(i).getString("crew");
                         JSONObject member = new JSONObject(APIClient.getCrewInfo(memberId));
                         String nameCrew = member.getString("name");
                         String role = crew.getJSONObject(i).getString("role");
-                        messageText += nameCrew + " is the " + role + ".\n";
+                        messageText += "\uD83E\uDDD1\u200D\uD83D\uDE80 " + nameCrew + " is the " + role + ".\n";
 
                         if (member.has("image") && member.get("image") instanceof String)
                             messageText += "Here is a link to the photo: "
