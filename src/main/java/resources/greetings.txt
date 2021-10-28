@@ -1,0 +1,3 @@
+🚀 Welcome to SpaceX data insights! 🚀
+The bot will provide you insights about upcoming launches, past events,
+history facts and some other information.

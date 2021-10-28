@@ -6,34 +6,35 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class CLI_Application {
-    private static Scanner scanner;
-    private static String action = "";
-    private static Map<User, Integer> users = new HashMap<>();
-
-    private final static String START_COMMAND = "/start";
     private final static String UPCOMING_EVENT_COMMAND = "/upcoming";
     private final static String PAST_EVENTS_COMMAND = "/past";
     private final static String FACT_COMMAND = "/fact";
     private final static String EXIT_COMMAND = "/exit";
     private final static String HELP_COMMAND = "/help";
-    private final static String HELP_MESSAGE = "Use the following commands to get new information:\n" +
-            UPCOMING_EVENT_COMMAND + " - get information about upcoming event\n" +
-            PAST_EVENTS_COMMAND + " - get information about 10 last events\n" +
-            FACT_COMMAND + " - get a random fact about the SpaceX company\n" +
+    private final static String HELP_MESSAGE = "Use the following commands to:\n" +
+            UPCOMING_EVENT_COMMAND + " - get information about upcoming launch\n" +
+            PAST_EVENTS_COMMAND + " - get information about last events\n" +
+            FACT_COMMAND + " - get random fact about the SpaceX company\n" +
             HELP_COMMAND + " - get this message\n" +
             EXIT_COMMAND + " - exit bot";
-    private static final String GREETING_MESSAGE =
-            "Welcome to SpaceX data insights!\n" +
-                    "The bot can provide you insights about upcoming flights, information on past events, \n" +
-                    "facts, history and some other information.";
-//            "To start please enter " + START_COMMAND +".";
+    private static Scanner scanner;
+    private static String action = "";
+    private static String GREETING_MESSAGE = "";
+    private static Set<String> commands = new HashSet<>();
 
     public static void main(String[] args) throws IOException {
         scanner = new Scanner(System.in);
 
+        try {
+            GREETING_MESSAGE = Files.readString(Path.of("src", "main", "java", "resources", "greetings.txt"));
+            commands.addAll(Files.readAllLines(Path.of("src", "main", "java", "resources", "commands-cli")));
+        } catch (IOException ignored) {
+        }
         System.out.println(GREETING_MESSAGE);
         handleCommand();
         scanner.close();
@@ -43,38 +44,53 @@ public class CLI_Application {
         while (!action.equals("EXIT")) {
             System.out.println("Now you can type in the next command");
             switch (scanner.nextLine()) {
-                case UPCOMING_EVENT_COMMAND: action = "upcoming";
+                case UPCOMING_EVENT_COMMAND:
+                    action = "upcoming";
                     handleUpcomingEvent();
                     break;
-                case PAST_EVENTS_COMMAND: action = "past";
+                case PAST_EVENTS_COMMAND:
+                    action = "past";
                     handlePastEvents();
                     break;
-                case FACT_COMMAND: action = "fact";
+                case FACT_COMMAND:
+                    action = "fact";
                     handleFact();
                     break;
-                case EXIT_COMMAND: action = "EXIT";
+                case EXIT_COMMAND:
+                    action = "EXIT";
                     break;
-                case HELP_COMMAND: action = "help";
+                case HELP_COMMAND:
+                    action = "help";
                     System.out.println(HELP_MESSAGE);
+                default:
+                    System.out.println("Sorry I don't know this command... Try another one");
             }
         }
     }
+
     private static void handleCommand(String command) {
         if (!action.equals("EXIT")) {
             switch (command) {
-                case UPCOMING_EVENT_COMMAND: action = "upcoming";
+                case UPCOMING_EVENT_COMMAND:
+                    action = "upcoming";
                     handleUpcomingEvent();
                     break;
-                case PAST_EVENTS_COMMAND: action = "past";
+                case PAST_EVENTS_COMMAND:
+                    action = "past";
                     handlePastEvents();
                     break;
-                case FACT_COMMAND: action = "fact";
+                case FACT_COMMAND:
+                    action = "fact";
                     handleFact();
                     break;
-                case EXIT_COMMAND: action = "EXIT";
+                case EXIT_COMMAND:
+                    action = "EXIT";
                     break;
-                case HELP_COMMAND: action = "help";
+                case HELP_COMMAND:
+                    action = "help";
                     System.out.println(HELP_MESSAGE);
+                default:
+                    System.out.println("Sorry I don't know this command... Try another one");
             }
         }
     }
@@ -86,7 +102,7 @@ public class CLI_Application {
             JSONObject fact = facts.getJSONObject(id);
             String title = fact.getString("title");
             Long timeStamp = fact.getLong("event_date_unix");
-            Date date = new Date(timeStamp*1000);
+            Date date = new Date(timeStamp * 1000);
             System.out.println(title + " on " + date);
             if (fact.has("details") && fact.get("details") instanceof String)
                 System.out.println(fact.getString("details"));
@@ -118,7 +134,7 @@ public class CLI_Application {
             for (int i = past.length() - 1; i >= 0; i--) {
                 JSONObject event = past.getJSONObject(i);
                 Long timeStamp = event.getLong("date_unix");
-                Date date = new Date(timeStamp*1000);
+                Date date = new Date(timeStamp * 1000);
                 System.out.print(count + ". " + "The launch was on " + date + " with ");
                 printCrewAmount(event.getJSONArray("crew").length());
                 if (event.has("details") && event.get("details") instanceof String) {
@@ -151,7 +167,7 @@ public class CLI_Application {
 
                     JSONObject event = past.getJSONObject(past.length() - id);
                     Long timeStamp = event.getLong("date_unix");
-                    Date date = new Date(timeStamp*1000);
+                    Date date = new Date(timeStamp * 1000);
                     System.out.print("The launch was on " + date + " with ");
                     getEventData(event);
                 } else if (idLine.equals("EXIT")) {
@@ -283,7 +299,7 @@ public class CLI_Application {
             JSONObject nextEvent = null;
             for (int i = 0; i < jsonArray.length(); i++) {
                 Long timeStamp = jsonArray.getJSONObject(i).getLong("date_unix");
-                Date date = new Date(timeStamp*1000);
+                Date date = new Date(timeStamp * 1000);
                 Date now = Calendar.getInstance().getTime();
                 //check if the event happens after the current time
                 if (date.after(now)) {
@@ -296,7 +312,7 @@ public class CLI_Application {
                 return;
             }
             Long timeStamp = nextEvent.getLong("date_unix");
-            Date date = new Date(timeStamp*1000);
+            Date date = new Date(timeStamp * 1000);
             System.out.print("Next launch is on " + date + " with ");
             getEventData(nextEvent);
             action = "";
