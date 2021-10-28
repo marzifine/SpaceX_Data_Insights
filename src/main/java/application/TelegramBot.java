@@ -5,9 +5,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.inlinequery.InlineQuery;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -92,6 +96,12 @@ public class TelegramBot extends TelegramLongPollingBot {
                     else if (user.getAction().contains("past:")) handlePastEvents(update, user);
                 }
             }
+        } else if (update.hasCallbackQuery()) {
+            User user = users.get(update.getCallbackQuery().getMessage().getFrom());
+            if (!user.getAction().equals("")) {
+                if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user);
+                else if (user.getAction().contains("past:")) handlePastEvents(update, user);
+            }
         }
     }
 
@@ -151,7 +161,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 getNextFivePastEvents(update, user, messageText, past);
                 user.setAction("past:ask");
             } else if (user.getAction().equals("past:ask")) {
-                switch (update.getMessage().getText()) {
+                switch (update.getCallbackQuery().getData()) {
                     case "YES":
                         String messageText = "";
                         JSONArray past = user.getPastEvents();
@@ -259,11 +269,27 @@ public class TelegramBot extends TelegramLongPollingBot {
                 keyboardMarkup.setOneTimeKeyboard(true);
                 List<KeyboardRow> list = new ArrayList<>();
                 KeyboardRow row = new KeyboardRow();
-                row.add("YES");
-                row.add("NO");
+                InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+                List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+                InlineKeyboardButton yes = new InlineKeyboardButton();
+                yes.setText("YES");
+                yes.setCallbackData("YES");
+
+                InlineKeyboardButton no = new InlineKeyboardButton();
+                no.setText("NO");
+                no.setCallbackData("NO");
+                rowInline.add(yes);
+                rowInline.add(no);
+                rowsInline.add(rowInline);
+                markupInline.setKeyboard(rowsInline);
+//                row.add("YES");
+//                row.add("NO");
                 list.add(row);
                 keyboardMarkup.setKeyboard(list);
                 message.setReplyMarkup(keyboardMarkup);
+                message.setReplyMarkup(markupInline);
                 try {
                     execute(message); // Call method to send the message
                 } catch (TelegramApiException e) {
@@ -298,7 +324,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             int crewAmount = crew.length();
 
             String messageText = "";
-            switch (update.getMessage().getText()) {
+            switch (update.getCallbackQuery().getData()) {
                 case "ROCKET":
                     String rocketId = "";
                     if (event.has("rocket") && event.get("rocket") instanceof String)
@@ -384,13 +410,38 @@ public class TelegramBot extends TelegramLongPollingBot {
         keyboardMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> list = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
-        row.add("ROCKET");
-        row.add("CREW");
-        row.add("LAUNCHPAD");
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+        InlineKeyboardButton rocket = new InlineKeyboardButton();
+        rocket.setText("ROCKET");
+        rocket.setCallbackData("ROCKET");
+
+        InlineKeyboardButton crew = new InlineKeyboardButton();
+        crew.setText("CREW");
+        crew.setCallbackData("CREW");
+
+        InlineKeyboardButton launchpad = new InlineKeyboardButton();
+        launchpad.setText("LAUNCHPAD");
+        launchpad.setCallbackData("LAUNCHPAD");
+
+        rowInline.add(rocket);
+        rowInline.add(crew);
+        rowInline.add(launchpad);
+
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+
+//        row.add("ROCKET");
+//        row.add("CREW");
+//        row.add("LAUNCHPAD");
         row.add("EXIT");
         list.add(row);
+
         keyboardMarkup.setKeyboard(list);
         message.setReplyMarkup(keyboardMarkup);
+        message.setReplyMarkup(markupInline);
         try {
             execute(message); // Call method to send the message
         } catch (TelegramApiException e) {
