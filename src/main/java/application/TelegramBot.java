@@ -170,6 +170,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         String messageText = "";
                         JSONArray past = user.getPastEvents();
                         getNextFivePastEvents(update, user, messageText, past, chatId);
+                        break;
                     case "NO":
                         SendMessage message = new SendMessage();
                         message.setChatId(String.valueOf(chatId));
