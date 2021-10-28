@@ -78,24 +78,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                         }
                     }
                 }
-            } else {
-//                if (update.getMessage().getText().equals("EXIT")) {
-//                    user.setAction("");
-//                    SendMessage message = new SendMessage();
-//                    message.setChatId(String.valueOf(chatId));
-//                    message.setText("Action was successfully aborted!");
-//                    ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
-//                    remove.setRemoveKeyboard(true);
-//                    message.setReplyMarkup(remove);
-//                    try {
-//                        execute(message); // Call method to send the message
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                } else if (!user.getAction().equals("")) {
-//                    if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user, chatId);
-//                    else if (user.getAction().contains("past:")) handlePastEvents(update, user, chatId);
-//                }
             }
         } else if (update.hasCallbackQuery()) {
             if (!users.containsKey(currentUserId))
@@ -165,11 +147,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 JSONArray past = new JSONArray(APIClient.getPastEvents());
                 user.setPastEvents(past);
                 getNextFivePastEvents(user, past, chatId);
-
             }
-//                if (user.getAction().contains("choosing")) {
-//                    getEventData(update, user, chatId);
-//                } else
             if (callbackQuery[1].equalsIgnoreCase("event")) {
                 String messageText = "";
                 int id = Integer.parseInt(update.getCallbackQuery().getData()
@@ -180,7 +158,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 Date date = new Date(timeStamp * 1000);
                 messageText += "The launch was on " + date + " with ";
                 getLaunchDetails(user, messageText, event, chatId, "past:");
-//                user.setAction("past:ask:choosing");
             } else {
                 switch (callbackQuery[1]) {
                     case "next":
@@ -189,7 +166,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                         break;
                     case "exit":
                         user.setPastEventId(1);
-//                        user.setAction("");
                         break;
                     default:
                         getEventData(user, chatId, callbackQuery, "past");
