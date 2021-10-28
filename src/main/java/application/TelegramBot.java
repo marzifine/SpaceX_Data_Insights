@@ -30,6 +30,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static Map<Long, User> users = new HashMap<Long, User>();
     private static String GREETING_MESSAGE;
     private final Set<String> commands = new HashSet<>();
+    private final int TOKEN_LENGTH = 46;
 
     public TelegramBot() {
         super();
@@ -51,8 +52,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             return Files.readString(Path.of("src", "resources", "api.txt"));
         } catch (IOException e) {
             Scanner sc = new Scanner(System.in);
-            System.out.println("Please enter your bot token");
+            System.out.println("Please enter your bot token:");
             String token = sc.nextLine();
+            while (token.length() != TOKEN_LENGTH || !token.contains(":")) {
+                System.out.println("Please enter right bot token:");
+                token = sc.nextLine();
+            }
             try {
                 Files.writeString(Path.of("src", "resources", "api.txt"), token);
             } catch (IOException ioException) {
@@ -179,6 +184,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                         break;
                     case "reset":
                         user.setPastEventId(1);
+                        SendMessage message = new SendMessage();
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("Next time you select past events they will start from the beginning \uD83D\uDE0A");
+                        try {
+                            execute(message); // Call method to send the message
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
                         break;
                     default:
                         getEventData(user, chatId, callbackQuery, "past");
@@ -258,7 +271,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> nextRowInline = new ArrayList<>();
         InlineKeyboardButton reset = new InlineKeyboardButton();
         reset.setText("RESET");
-        reset.setCallbackData("past:exit");
+        reset.setCallbackData("past:reset");
         nextRowInline.add(reset);
         rowsInline.add(nextRowInline);
 
