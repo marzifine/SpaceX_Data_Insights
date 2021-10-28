@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 public class User {
     private String action;
-    private final int id;
+    private final long id;
     private JSONObject event;
     private int pastEventId = 1;
     private JSONArray pastEvents;
@@ -35,7 +35,7 @@ public class User {
         this.event = event;
     }
 
-    public int getId() {
+    public long getId() {
         return id;
     }
 
@@ -47,7 +47,7 @@ public class User {
         this.action = action;
     }
 
-    public User(int id) {
+    public User(long id) {
         action = "";
         this.id = id;
     }

@@ -5,17 +5,18 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 public class Application extends TelegramLongPollingBot {
     private static Scanner scanner;
@@ -46,14 +47,20 @@ public class Application extends TelegramLongPollingBot {
 //        commands.addAll()
     }
 
-//    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException {
+        try {
+            TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
+            telegramBotsApi.registerBot(new Application());
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
 //        scanner = new Scanner(System.in);
 //
 //        System.out.println(GREETING_MESSAGE);
-//        handleCommand();
+////        handleCommand();
 //        scanner.close();
-//    }
-
+    }
+//
 //    private static void handleCommand() {
 //        while (!action.equals("EXIT")) {
 //            System.out.println("Now you can type in the next command");
@@ -459,12 +466,6 @@ public class Application extends TelegramLongPollingBot {
         }
     }
 
-    /**
-     * The method searches for upcoming events at SpaceX and
-     * gives information
-     * @param update
-     * @param user
-     */
     private void handleUpcomingEvent(Update update, User user) {
         try {
             if (user.getAction().equals("")) {
@@ -556,7 +557,7 @@ public class Application extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return null;
+        return "2044808909:AAH70a1hUq172F7dfsYQVWrzCHgL1dbYNaE";
     }
 
     @Override
@@ -634,4 +635,6 @@ public class Application extends TelegramLongPollingBot {
             }
         }
     }
+
+//    private void handleHelp(Update update, User user) { }
 }
