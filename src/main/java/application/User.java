@@ -1,10 +1,13 @@
 package application;
 
-import netscape.javascript.JSObject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class User {
+    /**
+     * User has id, last researched event,
+     * an id of last visible past event and an array of past events
+     */
     private final long id;
     private JSONObject event;
     private int pastEventId = 1;

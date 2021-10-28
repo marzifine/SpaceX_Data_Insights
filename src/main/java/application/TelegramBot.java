@@ -4,14 +4,10 @@ import client.APIClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.IOException;
@@ -28,14 +24,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final static String UPCOMING_EVENT_COMMAND = "/upcoming";
     private final static String PAST_EVENTS_COMMAND = "/past";
     private final static String FACT_COMMAND = "/fact";
-    private static Map<Long, User> users = new HashMap<Long, User>();
+    private static Map<Long, User> users;
     private static String GREETING_MESSAGE;
     private final Set<String> commands = new HashSet<>();
-    private final int TOKEN_LENGTH = 46;
 
     public TelegramBot() {
         super();
         try {
+            users = new HashMap<>();
             GREETING_MESSAGE = Files.readString(Path.of("src", "resources", "greetings.txt"));
             commands.addAll(Files.readAllLines(Path.of("src",  "resources", "commands-bot")));
         } catch (IOException ignored) {
@@ -47,8 +43,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         return "SpaceXBot";
     }
 
+    /**
+     * The method checks before initial run that the bot has a valid token;
+     * if not - asks to enter it and saves to the api.txt file
+     * @return String of Bot Token
+     */
     @Override
     public String getBotToken() {
+        int TOKEN_LENGTH = 46;
         try {
             String token = Files.readString(Path.of("src", "resources", "api.txt"));
             if (token.length() != TOKEN_LENGTH || !token.contains(":")) {
@@ -73,6 +75,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method notifies if there was an action (message or query callback) made towards bot;
+     * checks users id and chats id; handles command or query callback
+     * @param update - Update towards bot
+     */
     @Override
     public void onUpdateReceived(Update update) {
         final Long currentUserId = update.hasCallbackQuery() ?
@@ -87,9 +94,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 String command = update.getMessage().getText();
                 switch (command) {
                     case START_COMMAND -> handleStart(chatId);
-                    case UPCOMING_EVENT_COMMAND -> handleUpcomingEvent(update, user, chatId, false, null);
+                    case UPCOMING_EVENT_COMMAND -> handleUpcomingEvent(user, chatId, false, null);
                     case PAST_EVENTS_COMMAND -> handlePastEvents(update, user, chatId, false, null);
-                    case FACT_COMMAND -> handleFact(update, user, chatId);
+                    case FACT_COMMAND -> handleFact(chatId);
                     default -> {
                         SendMessage message = new SendMessage();
                         message.setChatId(String.valueOf(chatId));
@@ -112,41 +119,46 @@ public class TelegramBot extends TelegramLongPollingBot {
             //callbackQuery[2] - id of objects(for past - use it's count)
             String[] callbackQuery = update.getCallbackQuery().getData().split(":");
             if (callbackQuery[0].equalsIgnoreCase("upcoming")) {
-                handleUpcomingEvent(update, user, chatId, true, callbackQuery);
+                handleUpcomingEvent(user, chatId, true, callbackQuery);
             } else if (callbackQuery[0].equalsIgnoreCase("past"))
                 handlePastEvents(update, user, chatId, true, callbackQuery);
         }
     }
 
-    private void handleFact(Update update, User user, Integer chatId) {
+    /**
+     * The method handles a random fact:
+     * redirects request to APIClient and gets a random fact from the provided array
+     * @param chatId - current chatId
+     */
+    private void handleFact(Integer chatId) {
         try {
             JSONArray facts = new JSONArray(APIClient.getFacts());
             int id = new Random().nextInt(facts.length());
             JSONObject fact = facts.getJSONObject(id);
             String title = fact.getString("title");
-            Long timeStamp = fact.getLong("event_date_unix");
+            long timeStamp = fact.getLong("event_date_unix");
             Date date = new Date(timeStamp * 1000);
-            String messageText = "";
-            messageText += title + " on " + date;
+            StringBuilder messageText = new StringBuilder();
+            messageText.append(title).append(" on ").append(date);
             if (fact.has("details") && fact.get("details") instanceof String)
-                messageText += "\n" + fact.getString("details");
+                messageText.append("\n").append(fact.getString("details"));
             if (fact.has("links") && fact.get("links") instanceof JSONObject) {
                 JSONObject links = (fact.getJSONObject("links"));
                 if (links.has("article")) {
                     if (links.get("article") instanceof String)
-                        messageText += "\nTo read more click here: " + new URL(links.getString("article")) + "\n";
+                        messageText.append("\nTo read more click here: ").append(new URL(links.getString("article"))).append("\n");
                     else if (links.get("article") instanceof JSONArray) {
                         JSONArray articles = links.getJSONArray("article");
-                        messageText += ("\nTo read more click here: ");
+                        messageText.append("\nTo read more click here: ");
                         for (int i = 0; i < articles.length(); i++) {
-                            messageText += articles.getString(i) + "\n";
+                            messageText.append(articles.getString(i)).append("\n");
                         }
                     }
                 }
             }
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText(messageText);
+            message.setText(messageText.toString());
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
@@ -164,6 +176,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method handles past events:
+     * redirects a request to APIClient, shows a user every 5 events starting from the
+     * closest to current date; it's possible to get more information about every event
+     * @param update - Update towards bot
+     * @param user - current User
+     * @param chatId - current chatId
+     * @param callback - if there was a callback (the button was pressed)
+     * @param callbackQuery - array of callback information
+     */
     private void handlePastEvents(Update update, User user, Integer chatId, boolean callback, String[] callbackQuery) {
         try {
             if (!callback) {
@@ -177,17 +199,17 @@ public class TelegramBot extends TelegramLongPollingBot {
                         .substring(update.getCallbackQuery().getData().lastIndexOf(":") + 1));
                 JSONObject event = user.getPastEvents().getJSONObject(user.getPastEvents().length() - id);
                 user.setEvent(event);
-                Long timeStamp = event.getLong("date_unix");
+                long timeStamp = event.getLong("date_unix");
                 Date date = new Date(timeStamp * 1000);
                 messageText += "The launch was on " + date + " with ";
                 getLaunchDetails(user, messageText, event, chatId, "past:");
             } else {
                 switch (callbackQuery[1]) {
-                    case "next":
+                    case "next" -> {
                         JSONArray past = user.getPastEvents();
                         getNextFivePastEvents(user, past, chatId);
-                        break;
-                    case "reset":
+                    }
+                    case "reset" -> {
                         user.setPastEventId(1);
                         SendMessage message = new SendMessage();
                         message.setChatId(String.valueOf(chatId));
@@ -197,9 +219,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                         } catch (TelegramApiException e) {
                             e.printStackTrace();
                         }
-                        break;
-                    default:
-                        getEventData(user, chatId, callbackQuery, "past");
+                    }
+                    default -> getEventData(chatId, callbackQuery);
                 }
             }
 
@@ -215,12 +236,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method gives more details about specific launch:
+     * crew, provided description, links to webcast, wikipedia, article;
+     * asks if user wants to get more information about rocket/crew/launchpad
+     * @param user - current User
+     * @param messageText - text for message to send to user
+     * @param event - current event to get details about
+     * @param chatId - current chatId
+     * @param callbackAction - previous callback action
+     * @throws MalformedURLException - is thrown if the url isn't valid
+     */
     private void getLaunchDetails(User user, String messageText, JSONObject event, Integer chatId, String callbackAction)
             throws MalformedURLException {
         messageText = getCrewAmountString(messageText, event);
 
         if (event.has("details") && event.get("details") instanceof String) {
-            messageText += "The description to this event is:\n" + event.getString("details") + "\n";
+            messageText += event.getString("details") + "\n";
         }
 
         if (event.has("links") && event.get("links") instanceof JSONObject) {
@@ -238,6 +270,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         askAboutDetails(user, messageText, chatId, callbackAction);
     }
 
+    /**
+     * The method shows next 5 past events as buttons to be pressed,
+     * also shows NEXT (for next 5 events) button and RESET button to
+     * get past events from the very beginning
+     * @param user - current User
+     * @param past - array of all past events
+     * @param chatId - current chatId
+     */
     private void getNextFivePastEvents(User user, JSONArray past, Integer chatId) {
         int count = user.getPastEventId();
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -245,7 +285,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         for (int i = past.length() - user.getPastEventId(); i >= 0; i--) {
             JSONObject event = past.getJSONObject(i);
-            Long timeStamp = event.getLong("date_unix");
+            long timeStamp = event.getLong("date_unix");
             Date date = new Date(timeStamp * 1000);
             String messageText = date + " with ";
             messageText = getCrewAmountString(messageText, event);
@@ -297,6 +337,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         user.setPastEventId(count + 1);
     }
 
+    /**
+     * The method completes a text for message with the right text
+     * depending on amount of crew members
+     * @param messageText - text to complete
+     * @param event - current event
+     * @return completed String
+     */
     private String getCrewAmountString(String messageText, JSONObject event) {
         JSONArray crew = event.getJSONArray("crew");
         int crewAmount = crew.length();
@@ -309,14 +356,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         return messageText;
     }
 
-    private void getEventData(User user, Integer chatId, String[] callbackQuery, String callbackAction) {
+    /**
+     * The method gives more information about rocket/crew/launchpad
+     * @param chatId - current chatId
+     * @param callbackQuery - array of callback information
+     */
+    private void getEventData(Integer chatId, String[] callbackQuery) {
         try {
-            String messageText = "";
+            StringBuilder messageText = new StringBuilder();
             switch (callbackQuery[1]) {
-                case "rocket":
+                case "rocket" -> {
                     if (callbackQuery.length < 3) {
-                        messageText += "Sorry, information about the rocket is missing.\n" +
-                                "Please try again later \uD83E\uDD7A";
+                        messageText.append("Sorry, information about the rocket is missing.\n" + "Please try again later \uD83E\uDD7A");
                         break;
                     }
                     String rocketInfo = APIClient.getRocketInfo(callbackQuery[2]);
@@ -324,65 +375,58 @@ public class TelegramBot extends TelegramLongPollingBot {
                     String nameRocket = rocket.getString("name");
                     String type = rocket.getString("type");
                     String firstFlight = rocket.getString("first_flight");
-                    messageText += "The name of the " + type + " is " + nameRocket + "\n" +
-                            "and its first flight was on " + firstFlight + ".\n";
+                    messageText.append("The name of the ").append(type).append(" is ").append(nameRocket).append("\n").append("and its first flight was on ").append(firstFlight).append(".\n");
                     if (rocket.has("description") && rocket.get("description") instanceof String) {
                         String description = rocket.getString("description");
-                        messageText += "Provided description is:\n" + description + "\n";
+                        messageText.append("Provided description is:\n").append(description).append("\n");
                     }
                     if (rocket.has("flickr_images") && rocket.get("flickr_images") instanceof JSONArray) {
                         String flickrImage = ((JSONArray) rocket.get("flickr_images")).getString(0);
-                        messageText += "Here is a link to an image: " + new URL(flickrImage) + "\n";
+                        messageText.append("Here is a link to an image: ").append(new URL(flickrImage)).append("\n");
                     }
-                    break;
-                //TODO get event by id
-                case "crew":
+                }
+                case "crew" -> {
                     JSONObject event = new JSONObject(APIClient.getEvent(callbackQuery[2]));
                     JSONArray crew = event.getJSONArray("crew");
                     int crewAmount = crew.length();
                     if (crewAmount == 0) {
-                        messageText += "Oops, it seems like there is no information about the crew.\n" +
-                                "Please try another time \uD83E\uDD7A";
+                        messageText.append("Oops, it seems like there is no information about the crew.\n" + "Please try another time \uD83E\uDD7A");
                         break;
                     }
-                    messageText += "Meet the crew!";
-                    for (int i = 0; i < crew.length(); i++)
-                        messageText += "\uD83E\uDDD1\u200D\uD83D\uDE80";
-                    messageText += "\n\n";
+                    messageText.append("Meet the crew!");
+                    messageText.append("\uD83E\uDDD1\u200D\uD83D\uDE80".repeat(Math.max(0, crew.length())));
+                    messageText.append("\n\n");
                     for (int i = 0; i < crew.length(); i++) {
                         String memberId = crew.getJSONObject(i).getString("crew");
                         JSONObject member = new JSONObject(APIClient.getCrewInfo(memberId));
                         String nameCrew = member.getString("name");
                         String role = crew.getJSONObject(i).getString("role");
-                        messageText += "\uD83E\uDDD1\u200D\uD83D\uDE80 " + nameCrew + " is the " + role + ".\n";
+                        messageText.append("\uD83E\uDDD1\u200D\uD83D\uDE80 ").append(nameCrew).append(" is the ").append(role).append(".\n");
 
                         if (member.has("image") && member.get("image") instanceof String)
-                            messageText += "Here is a link to the photo: "
-                                    + new URL(member.getString("image")) + "\n";
+                            messageText.append("Here is a link to the photo: ").append(new URL(member.getString("image"))).append("\n");
 
                         if (member.has("wikipedia") && member.get("wikipedia") instanceof String)
-                            messageText += "Here is a link to the wikipedia page: "
-                                    + new URL(member.getString("wikipedia")) + "\n";
+                            messageText.append("Here is a link to the wikipedia page: ").append(new URL(member.getString("wikipedia"))).append("\n");
                     }
-                    break;
-                case "launchpad":
+                }
+                case "launchpad" -> {
                     if (callbackQuery.length < 3) {
-                        messageText += "Sorry, information about the launchpad is missing.\n" +
-                                "Please try again later \uD83E\uDD7A";
+                        messageText.append("Sorry, information about the launchpad is missing.\n" + "Please try again later \uD83E\uDD7A");
                         break;
                     }
-                    messageText += "This is a launchpad for the selected flight! \uD83D\uDCA5 \n";
+                    messageText.append("This is a launchpad for the selected flight! \uD83D\uDCA5 \n");
                     String launchpadId = callbackQuery[2];
                     String launchpadInfo = APIClient.getLaunchpadInfo(launchpadId);
                     JSONObject launchpad = new JSONObject(launchpadInfo);
                     String nameLaunchpad = launchpad.getString("full_name");
                     int success = launchpad.getJSONArray("launches").length();
-                    messageText += nameLaunchpad + " has already " + success + " succeeded launches!";
-                    break;
+                    messageText.append(nameLaunchpad).append(" has already ").append(success).append(" succeeded launches!");
+                }
             }
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
-            message.setText(messageText);
+            message.setText(messageText.toString());
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
@@ -400,6 +444,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method asks user if there is need to get more information about rocket/crew/launchpad
+     * as buttons
+     * @param user - current User
+     * @param messageText - text to send to user
+     * @param chatId - current chatId
+     * @param callbackAction - last callback action
+     */
     private void askAboutDetails(User user, String messageText, Integer chatId, String callbackAction) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
@@ -445,14 +497,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleUpcomingEvent(Update update, User user, Integer chatId, boolean callback, String[] callbackQuery) {
+    /**
+     * The method handles an upcoming event:
+     * redirects request to APIClient, gets the closest to the current date event and
+     * gets more details about it
+     * @param user - current User
+     * @param chatId - current chatId
+     * @param callback - if there was a callback (the button was pressed)
+     * @param callbackQuery - array of callback information
+     */
+    private void handleUpcomingEvent(User user, Integer chatId, boolean callback, String[] callbackQuery) {
         try {
             if (!callback) {
                 String messageText = "";
                 JSONArray jsonArray = new JSONArray(Objects.requireNonNull(APIClient.getUpcomingEvent()));
                 JSONObject nextEvent = null;
                 for (int i = 0; i < jsonArray.length(); i++) {
-                    Long timeStamp = jsonArray.getJSONObject(i).getLong("date_unix");
+                    long timeStamp = jsonArray.getJSONObject(i).getLong("date_unix");
                     Date date = new Date(timeStamp * 1000);
                     Date now = Calendar.getInstance().getTime();
                     //check if the event happens after the current time
@@ -472,13 +533,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     }
                     return;
                 }
-                Long timeStamp = nextEvent.getLong("date_unix");
+                long timeStamp = nextEvent.getLong("date_unix");
                 Date date = new Date(timeStamp * 1000);
                 messageText += "Next launch is on " + date + " with ";
                 //gets details and sends the message
                 getLaunchDetails(user, messageText, nextEvent, chatId, "upcoming:");
             } else if (callbackQuery[0].equalsIgnoreCase("upcoming"))
-                getEventData(user, chatId, callbackQuery, "upcoming");
+                getEventData(chatId, callbackQuery);
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
@@ -491,6 +552,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * The method handles start:
+     * sends a greetings message
+     * @param chatId - current chatId
+     */
     private void handleStart(Integer chatId) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));

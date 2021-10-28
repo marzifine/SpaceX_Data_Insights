@@ -41,6 +41,9 @@ public class CLI_Application {
         scanner.close();
     }
 
+    /**
+     * The method handles a given command
+     */
     private static void handleCommand() {
         while (!action.equals("EXIT")) {
             System.out.println("Now you can type in the next command");
@@ -69,6 +72,10 @@ public class CLI_Application {
         }
     }
 
+    /**
+     * The method handles provided command
+     * @param command - provided command
+     */
     private static void handleCommand(String command) {
         if (!action.equals("EXIT")) {
             switch (command) {
@@ -97,6 +104,10 @@ public class CLI_Application {
         }
     }
 
+    /**
+     * The method handles a random fact:
+     * redirects request to APIClient and gets a random fact from the provided array
+     */
     private static void handleFact() {
         try {
             JSONArray facts = new JSONArray(APIClient.getFacts());
@@ -129,6 +140,11 @@ public class CLI_Application {
 
     }
 
+    /**
+     * The method handles past events:
+     * redirects a request to APIClient, shows a user every 5 events starting from the
+     * closest to current date; it's possible to get more information about every event
+     */
     private static void handlePastEvents() {
         try {
             JSONArray past = new JSONArray(APIClient.getPastEvents());
@@ -182,6 +198,11 @@ public class CLI_Application {
         }
     }
 
+    /**
+     * The method completes a message-text with the right text
+     * depending on amount of crew members
+     * @param crewAmount - amount of crew members
+     */
     private static void printCrewAmount(int crewAmount) {
         if (crewAmount == 0)
             System.out.println("no people ob board.");
@@ -191,6 +212,10 @@ public class CLI_Application {
             System.out.println(crewAmount + " people on board.");
     }
 
+    /**
+     * The method gives more information about details/rocket/crew/launchpad
+     * @param event - event to get more information about
+     */
     private static void getEventData(JSONObject event) {
         try {
             JSONArray crew = event.getJSONArray("crew");
@@ -292,6 +317,11 @@ public class CLI_Application {
         }
     }
 
+    /**
+     * The method handles an upcoming event:
+     * redirects request to APIClient, gets the closest to the current date event and
+     * gets more details about it
+     */
     private static void handleUpcomingEvent() {
         try {
             JSONArray jsonArray = new JSONArray(Objects.requireNonNull(APIClient.getUpcomingEvent()));
