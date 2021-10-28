@@ -11,6 +11,10 @@ import org.json.JSONArray;
 import org.mortbay.util.IO;
 
 public class APIClient {
+    public static String getEvent(String id) throws IOException {
+        return getData("https://api.spacexdata.com/v5/launches/" + id);
+    }
+
     public static String getPastEvents() throws IOException {
         return getData("https://api.spacexdata.com/v5/launches/past");
     }
@@ -40,10 +44,10 @@ public class APIClient {
         connection.setRequestMethod("GET");
 
         int responseCode = connection.getResponseCode();
-        if(responseCode == 200){
+        if (responseCode == 200) {
             String response = "";
             Scanner scanner = new Scanner(connection.getInputStream());
-            while(scanner.hasNextLine()){
+            while (scanner.hasNextLine()) {
                 response += scanner.nextLine();
                 response += "\n";
             }
