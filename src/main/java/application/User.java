@@ -5,7 +5,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class User {
-    private String action;
     private final long id;
     private JSONObject event;
     private int pastEventId = 1;
@@ -39,16 +38,7 @@ public class User {
         return id;
     }
 
-    public String getAction() {
-        return action;
-    }
-
-    public void setAction(String action) {
-        this.action = action;
-    }
-
     public User(long id) {
-        action = "";
         this.id = id;
     }
 }

@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.*;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.mortbay.util.IO;
 
 public class APIClient {
