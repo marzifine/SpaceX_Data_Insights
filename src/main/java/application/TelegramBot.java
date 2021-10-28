@@ -185,6 +185,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                         break;
                     case "reset":
                         user.setPastEventId(1);
+                        SendMessage message = new SendMessage();
+                        message.setChatId(String.valueOf(chatId));
+                        message.setText("Next time you select past events they will start from the beginning \uD83D\uDE0A");
+                        try {
+                            execute(message); // Call method to send the message
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                        }
                         break;
                     default:
                         getEventData(user, chatId, callbackQuery, "past");
@@ -264,7 +272,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> nextRowInline = new ArrayList<>();
         InlineKeyboardButton reset = new InlineKeyboardButton();
         reset.setText("RESET");
-        reset.setCallbackData("past:exit");
+        reset.setCallbackData("past:reset");
         nextRowInline.add(reset);
         rowsInline.add(nextRowInline);
 
