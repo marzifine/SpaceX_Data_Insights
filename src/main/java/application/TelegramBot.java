@@ -60,13 +60,13 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (!users.containsKey(currentUserId))
                 users.put(currentUserId, new User(currentUserId));
             User user = users.get(currentUserId);
-            if (update.getMessage().isCommand()) {
+            if (update.getMessage().isCommand() && commands.contains(update.getMessage().getText())) {
                 user.setAction("");
                 String command = update.getMessage().getText();
                 switch (command) {
                     case START_COMMAND -> handleStart(update, user, chatId);
-                    case UPCOMING_EVENT_COMMAND -> handleUpcomingEvent(update, user, chatId);
-                    case PAST_EVENTS_COMMAND -> handlePastEvents(update, user, chatId);
+                    case UPCOMING_EVENT_COMMAND -> handleUpcomingEvent(update, user, chatId, false, null);
+                    case PAST_EVENTS_COMMAND -> handlePastEvents(update, user, chatId, false, null);
                     case FACT_COMMAND -> handleFact(update, user, chatId);
                     default -> {
                         SendMessage message = new SendMessage();
@@ -80,32 +80,37 @@ public class TelegramBot extends TelegramLongPollingBot {
                     }
                 }
             } else {
-                if (update.getMessage().getText().equals("EXIT")) {
-                    user.setAction("");
-                    SendMessage message = new SendMessage();
-                    message.setChatId(String.valueOf(chatId));
-                    message.setText("Action was successfully aborted!");
-                    ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
-                    remove.setRemoveKeyboard(true);
-                    message.setReplyMarkup(remove);
-                    try {
-                        execute(message); // Call method to send the message
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
-                    }
-                } else if (!user.getAction().equals("")) {
-                    if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user, chatId);
-                    else if (user.getAction().contains("past:")) handlePastEvents(update, user, chatId);
-                }
+//                if (update.getMessage().getText().equals("EXIT")) {
+//                    user.setAction("");
+//                    SendMessage message = new SendMessage();
+//                    message.setChatId(String.valueOf(chatId));
+//                    message.setText("Action was successfully aborted!");
+//                    ReplyKeyboardRemove remove = new ReplyKeyboardRemove();
+//                    remove.setRemoveKeyboard(true);
+//                    message.setReplyMarkup(remove);
+//                    try {
+//                        execute(message); // Call method to send the message
+//                    } catch (TelegramApiException e) {
+//                        e.printStackTrace();
+//                    }
+//                } else if (!user.getAction().equals("")) {
+//                    if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user, chatId);
+//                    else if (user.getAction().contains("past:")) handlePastEvents(update, user, chatId);
+//                }
             }
         } else if (update.hasCallbackQuery()) {
             if (!users.containsKey(currentUserId))
                 users.put(currentUserId, new User(currentUserId));
             User user = users.get(currentUserId);
-            if (!user.getAction().equals("")) {
-                if (user.getAction().contains("upcoming:")) handleUpcomingEvent(update, user, chatId);
-                else if (user.getAction().contains("past:")) handlePastEvents(update, user, chatId);
-            }
+            //query in format action:description:id[:id...]
+            //callbackQuery[0] - action(upcoming/past/...)
+            //callbackQuery[1] - description(event/rocket/launchpad/...)
+            //callbackQuery[2] - id of objects(for past - use it's count)
+            String[] callbackQuery = update.getCallbackQuery().getData().split(":");
+            if (callbackQuery[0].equalsIgnoreCase("upcoming")) {
+                handleUpcomingEvent(update, user, chatId, true, callbackQuery);
+            } else if (callbackQuery[0].equalsIgnoreCase("past"))
+                handlePastEvents(update, user, chatId, true, callbackQuery);
         }
     }
 
@@ -156,39 +161,43 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handlePastEvents(Update update, User user, Integer chatId) {
+    private void handlePastEvents(Update update, User user, Integer chatId, boolean callback, String[] callbackQuery) {
         try {
-            if (user.getAction().equals("")) {
+            if (!callback) {
                 JSONArray past = new JSONArray(APIClient.getPastEvents());
                 user.setPastEvents(past);
-                getNextFivePastEvents(update, user, past, chatId);
-                user.setAction("past:ask");
-            } else if (user.getAction().equals("past:ask")) {
-                if (user.getAction().contains("choosing")) {
-                    getEventData(update, user, chatId);
-                } else if (update.getCallbackQuery().getData().contains("past:event:")) {
-                    String messageText = "";
-                    int id = Integer.parseInt(update.getCallbackQuery().getData()
-                            .substring(update.getCallbackQuery().getData().lastIndexOf(":") + 1));
-                    JSONObject event = user.getPastEvents().getJSONObject(user.getPastEvents().length() - id);
-                    user.setEvent(event);
-                    Long timeStamp = event.getLong("date_unix");
-                    Date date = new Date(timeStamp * 1000);
-                    messageText += "The launch was on " + date + " with ";
-                    getLaunchDetails(update, user, messageText, event, chatId);
-                    user.setAction("past:ask:choosing");
-                } else {
-                    switch (update.getCallbackQuery().getData()) {
-                        case "past:next":
-                            JSONArray past = user.getPastEvents();
-                            getNextFivePastEvents(update, user, past, chatId);
-                            break;
-                        case "past:exit":
-                            user.setPastEventId(1);
-                            user.setAction("");
-                    }
+                getNextFivePastEvents(user, past, chatId);
+
+            }
+//                if (user.getAction().contains("choosing")) {
+//                    getEventData(update, user, chatId);
+//                } else
+            if (callbackQuery[1].equalsIgnoreCase("event")) {
+                String messageText = "";
+                int id = Integer.parseInt(update.getCallbackQuery().getData()
+                        .substring(update.getCallbackQuery().getData().lastIndexOf(":") + 1));
+                JSONObject event = user.getPastEvents().getJSONObject(user.getPastEvents().length() - id);
+                user.setEvent(event);
+                Long timeStamp = event.getLong("date_unix");
+                Date date = new Date(timeStamp * 1000);
+                messageText += "The launch was on " + date + " with ";
+                getLaunchDetails(user, messageText, event, chatId, "past:");
+//                user.setAction("past:ask:choosing");
+            } else {
+                switch (callbackQuery[1]) {
+                    case "next":
+                        JSONArray past = user.getPastEvents();
+                        getNextFivePastEvents(user, past, chatId);
+                        break;
+                    case "exit":
+                        user.setPastEventId(1);
+//                        user.setAction("");
+                        break;
+                    default:
+                        getEventData(user, chatId, callbackQuery, "past");
                 }
             }
+
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
@@ -201,13 +210,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void getLaunchDetails(Update update, User user, String messageText, JSONObject event, Integer chatId)
+    private void getLaunchDetails(User user, String messageText, JSONObject event, Integer chatId, String callbackAction)
             throws MalformedURLException {
         messageText = getCrewAmountString(messageText, event);
-
-        if (event.has("details") && event.get("details") instanceof String) {
-            messageText += "The description to this event is:\n" + event.getString("details") + "\n";
-        }
 
         if (event.has("links") && event.get("links") instanceof JSONObject) {
             JSONObject links = event.getJSONObject("links");
@@ -221,10 +226,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                 messageText += "Here is the link to an article: " + new URL(links.getString("article"));
         }
         user.setEvent(event);
-        askAboutDetails(update, messageText, chatId);
+        askAboutDetails(user, messageText, chatId, callbackAction);
     }
 
-    private void getNextFivePastEvents(Update update, User user, JSONArray past, Integer chatId) {
+    private void getNextFivePastEvents(User user, JSONArray past, Integer chatId) {
         int count = user.getPastEventId();
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -236,6 +241,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             String messageText = date + " with ";
             messageText = getCrewAmountString(messageText, event);
 
+            //add new event as a button
             List<InlineKeyboardButton> rowInline = new ArrayList<>();
             InlineKeyboardButton pastEvent = new InlineKeyboardButton();
             pastEvent.setText(messageText);
@@ -253,6 +259,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             count++;
         }
+        //add next button
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
         InlineKeyboardButton next = new InlineKeyboardButton();
         next.setText("NEXT");
@@ -260,6 +267,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowInline.add(next);
         rowsInline.add(rowInline);
 
+        //add exit button
         List<InlineKeyboardButton> nextRowInline = new ArrayList<>();
         InlineKeyboardButton exit = new InlineKeyboardButton();
         exit.setText("EXIT");
@@ -289,27 +297,23 @@ public class TelegramBot extends TelegramLongPollingBot {
             messageText += "1 person on board.\n";
         else
             messageText += crewAmount + " people on board.\n";
+        if (event.has("details") && event.get("details") instanceof String) {
+            messageText += "The description to this event is:\n" + event.getString("details") + "\n";
+        }
         return messageText;
     }
 
-    private void getEventData(Update update, User user, Integer chatId) {
+    private void getEventData(User user, Integer chatId, String[] callbackQuery, String callbackAction) {
         try {
-            JSONObject event = user.getEvent();
-            JSONArray crew = event.getJSONArray("crew");
-            int crewAmount = crew.length();
-
             String messageText = "";
-            switch (update.getCallbackQuery().getData()) {
-                case "ROCKET":
-                    String rocketId = "";
-                    if (event.has("rocket") && event.get("rocket") instanceof String)
-                        rocketId = event.getString("rocket");
-                    if (rocketId.equals("")) {
+            switch (callbackQuery[1]) {
+                case "rocket":
+                    if (callbackQuery.length < 3) {
                         messageText += "Sorry, information about the rocket is missing.\n" +
                                 "Please try again later \uD83E\uDD7A";
                         break;
                     }
-                    String rocketInfo = APIClient.getRocketInfo(rocketId);
+                    String rocketInfo = APIClient.getRocketInfo(callbackQuery[2]);
                     JSONObject rocket = new JSONObject(rocketInfo);
                     String nameRocket = rocket.getString("name");
                     String type = rocket.getString("type");
@@ -325,7 +329,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                         messageText += "Here is a link to an image: " + new URL(flickrImage);
                     }
                     break;
-                case "CREW":
+                //TODO get event by id
+                case "crew":
+                    JSONObject event = new JSONObject(APIClient.getEvent(callbackQuery[2]));
+                    JSONArray crew = event.getJSONArray("crew");
+                    int crewAmount = crew.length();
                     if (crewAmount == 0) {
                         messageText += "Oops, it seems like there is no information about the crew.\n" +
                                 "Please try another time \uD83E\uDD7A";
@@ -340,22 +348,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                         if (member.has("image") && member.get("image") instanceof String)
                             messageText += "Here is a link to the photo: "
-                                    + new URL(member.getString("image") + "\n");
+                                    + new URL(member.getString("image")) + "\n";
 
                         if (member.has("wikipedia") && member.get("wikipedia") instanceof String)
                             messageText += "Here is a link to the wikipedia page: "
-                                    + new URL(member.getString("wikipedia") + "\n");
+                                    + new URL(member.getString("wikipedia")) + "\n";
                     }
                     break;
-                case "LAUNCHPAD":
-                    String launchpadId = "";
-                    if (event.has("launchpad") && event.get("launchpad") instanceof String)
-                        launchpadId = event.getString("launchpad");
-                    if (launchpadId.equals("")) {
+                case "launchpad":
+                    if (callbackQuery.length < 3) {
                         messageText += "Sorry, information about the launchpad is missing.\n" +
                                 "Please try again later \uD83E\uDD7A";
                         break;
                     }
+                    String launchpadId = callbackQuery[2];
                     String launchpadInfo = APIClient.getLaunchpadInfo(launchpadId);
                     JSONObject launchpad = new JSONObject(launchpadInfo);
                     String nameLaunchpad = launchpad.getString("full_name");
@@ -363,7 +369,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                     messageText += nameLaunchpad + " has already " + success + " succeeded launches!";
                     break;
             }
-            askAboutDetails(update, messageText, chatId);
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId));
+            message.setText(messageText);
+            try {
+                execute(message); // Call method to send the message
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+//            askAboutDetails(user, messageText, chatId, callbackAction);
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
@@ -376,28 +390,46 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void askAboutDetails(Update update, String messageText, Integer chatId) {
+    private void askAboutDetails(User user, String messageText, Integer chatId, String callbackAction) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(messageText);
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(true);
+        List<KeyboardRow> list = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
 
+        String rocketId = "";
+        if (user.getEvent().has("rocket") && user.getEvent().get("rocket") instanceof String)
+            rocketId = user.getEvent().getString("rocket");
+        if (rocketId.equals("")) {
+            messageText += "Sorry, information about the rocket is missing.\n" +
+                    "Please try again later \uD83E\uDD7A";
+        }
         InlineKeyboardButton rocket = new InlineKeyboardButton();
         rocket.setText("ROCKET");
-        rocket.setCallbackData("ROCKET");
+        rocket.setCallbackData(callbackAction + "rocket:" + rocketId);
+
 
         InlineKeyboardButton crew = new InlineKeyboardButton();
         crew.setText("CREW");
-        crew.setCallbackData("CREW");
+        //id for crew is the id of event, cause of large data size
+        crew.setCallbackData(callbackAction + "crew:" + user.getEvent().getString("id"));
 
+        String launchpadId = "";
+        if (user.getEvent().has("launchpad") && user.getEvent().get("launchpad") instanceof String)
+            launchpadId = user.getEvent().getString("launchpad");
+        if (launchpadId.equals("")) {
+            messageText += "Sorry, information about the launchpad is missing.\n" +
+                    "Please try again later \uD83E\uDD7A";
+        }
         InlineKeyboardButton launchpad = new InlineKeyboardButton();
         launchpad.setText("LAUNCHPAD");
-        launchpad.setCallbackData("LAUNCHPAD");
+        launchpad.setCallbackData(callbackAction + "launchpad:" + launchpadId);
 
         rowInline.add(rocket);
         rowInline.add(crew);
@@ -414,6 +446,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowsInline.add(secondRowInline);
         markupInline.setKeyboard(rowsInline);
 
+        keyboardMarkup.setKeyboard(list);
         message.setReplyMarkup(keyboardMarkup);
         message.setReplyMarkup(markupInline);
         try {
@@ -423,9 +456,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleUpcomingEvent(Update update, User user, Integer chatId) {
+    private void handleUpcomingEvent(Update update, User user, Integer chatId, boolean callback, String[] callbackQuery) {
         try {
-            if (user.getAction().equals("")) {
+            if (!callback) {
                 String messageText = "";
                 JSONArray jsonArray = new JSONArray(Objects.requireNonNull(APIClient.getUpcomingEvent()));
                 JSONObject nextEvent = null;
@@ -454,10 +487,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                 Date date = new Date(timeStamp * 1000);
                 messageText += "Next launch is on " + date + " with ";
                 //gets details and sends the message
-                getLaunchDetails(update, user, messageText, nextEvent, chatId);
+                getLaunchDetails(user, messageText, nextEvent, chatId, "upcoming:");
                 user.setAction("upcoming:choosing");
-            } else if (user.getAction().equals("upcoming:choosing"))
-                getEventData(update, user, chatId);
+            } else if (callbackQuery[0].equalsIgnoreCase("upcoming"))
+                getEventData(user, chatId, callbackQuery, "upcoming");
         } catch (IOException error) {
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId));
