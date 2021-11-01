@@ -6,6 +6,8 @@ Application can provide the following data:
 * date and name of event
 * links to wikipedia page and webcast
 * rocket, crew and launchpad info
+## Motivation for Telegram Bot
+On October 4th, 2021 during the Facebook and Instagram blackout, Telegram saw an increase of 70 million users onto the platform in one day. This big flow of new users has made a great opportunity to expand development market on intensfully growing area.
 ## Telegram Bot view
 ![application-bot](src/resources/markdown/bot-app_compressed.gif)
 ## Command Line Interface view
